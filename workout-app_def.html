@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Workout Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --blue:#185FA5;--blue-light:#E6F1FB;--blue-dark:#0C447C;
+  --green:#27500A;--green-light:#EAF3DE;
+  --amber:#854F0B;--amber-light:#FAEEDA;
+  --gray:#5F5E5A;--gray-light:#F1EFE8;
+  --red:#A32D2D;--red-light:#FCEBEB;
+  --border:#e0ddd6;--border2:#ccc9c0;
+  --bg:#f7f6f2;--card:#ffffff;
+  --text:#1a1a18;--text2:#5F5E5A;--text3:#888780;
+  --radius:10px;--radius-sm:6px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;max-width:480px;margin:0 auto;min-height:100vh;}
+/* SCREENS */
+.screen{display:none;flex-direction:column;min-height:100vh;}
+.screen.active{display:flex;}
+/* TOPBAR */
+.topbar{padding:14px 16px 10px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:5;}
+.topbar-back{font-size:22px;color:var(--text2);cursor:pointer;padding:2px 6px 2px 0;}
+.topbar-title{font-size:16px;font-weight:600;flex:1;}
+.topbar-sub{font-size:12px;color:var(--text2);margin-top:1px;}
+.topbar-icon{font-size:22px;color:var(--text2);cursor:pointer;}
+/* CONTENT */
+.content{padding:16px;flex:1;}
+/* BOTTOM NAV */
+.nav-bar{display:flex;background:var(--card);border-top:1px solid var(--border);position:sticky;bottom:0;}
+.nav-item{flex:1;padding:10px 4px 8px;text-align:center;cursor:pointer;font-size:10px;color:var(--text2);border:none;background:none;}
+.nav-item.active{color:var(--blue);}
+.nav-item svg{display:block;margin:0 auto 2px;width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;}
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+.card.tappable{cursor:pointer;}
+.card.tappable:active{background:#f7f6f2;}
+.card-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.card-title{font-size:14px;font-weight:600;margin-bottom:3px;}
+.card-sub{font-size:12px;color:var(--text2);}
+/* BADGES */
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;white-space:nowrap;}
+.badge-next{background:var(--blue-light);color:var(--blue-dark);}
+.badge-done{background:var(--green-light);color:var(--green);}
+.badge-week{background:var(--gray-light);color:var(--gray);}
+.badge-new{background:var(--amber-light);color:var(--amber);}
+/* SECTION LABEL */
+.section-label{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.05em;text-transform:uppercase;margin:16px 0 8px;}
+/* LOCATION */
+.loc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;}
+.loc-card{border:1px solid var(--border);border-radius:var(--radius);padding:24px 12px;text-align:center;cursor:pointer;background:var(--card);}
+.loc-card:active{background:var(--bg);}
+.loc-card svg{width:32px;height:32px;stroke:var(--text2);fill:none;stroke-width:1.5;margin:0 auto 10px;display:block;}
+.loc-label{font-size:14px;font-weight:600;}
+/* TRISET */
+.triset-block{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+.triset-head{background:var(--bg);padding:8px 12px;font-size:11px;font-weight:600;color:var(--text2);display:flex;justify-content:space-between;border-bottom:1px solid var(--border);}
+/* EXERCISE ROW */
+.ex-row{padding:10px 12px;border-bottom:1px solid var(--border);}
+.ex-row:last-child{border-bottom:none;}
+.ex-row.core{background:#fafaf8;}
+.ex-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px;gap:6px;}
+.ex-name{font-size:13px;font-weight:600;flex:1;}
+.ex-tags{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+.ex-tag{font-size:11px;padding:2px 7px;border-radius:20px;background:var(--blue-light);color:var(--blue-dark);white-space:nowrap;}
+.ex-tag.kg{background:var(--gray-light);color:var(--gray);}
+.ex-tag.new{background:var(--amber-light);color:var(--amber);}
+.edit-btn{font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:3px;white-space:nowrap;}
+.edit-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;}
+/* INLINE INPUTS */
+.ex-inputs{display:flex;gap:6px;}
+.ex-input-group{display:flex;flex-direction:column;flex:1;}
+.ex-input-label{font-size:10px;color:var(--text3);margin-bottom:2px;}
+.ex-input{width:100%;font-size:14px;padding:6px 4px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--card);color:var(--text);text-align:center;-moz-appearance:textfield;}
+.ex-input::-webkit-inner-spin-button,.ex-input::-webkit-outer-spin-button{-webkit-appearance:none;}
+.ex-input:focus{outline:none;border-color:var(--blue);}
+/* BUTTONS */
+.btn-primary{width:100%;padding:13px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-top:14px;}
+.btn-primary:active{opacity:.88;}
+.btn-outline{width:100%;padding:11px;background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);font-size:14px;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;}
+.btn-outline svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;}
+/* FEEDBACK */
+.feedback-box{background:var(--green-light);border-radius:var(--radius);padding:14px;margin-bottom:14px;}
+.feedback-title{font-size:13px;font-weight:600;color:var(--green);margin-bottom:5px;display:flex;align-items:center;gap:5px;}
+.feedback-title svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;}
+.feedback-text{font-size:12px;color:#3B6D11;line-height:1.55;}
+.feedback-warn{background:var(--amber-light);}
+.feedback-warn .feedback-title{color:var(--amber);}
+.feedback-warn .feedback-text{color:#633806;}
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;}
+.stat-label{font-size:11px;color:var(--text2);margin-bottom:3px;}
+.stat-val{font-size:22px;font-weight:700;}
+/* HISTORY */
+.history-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+.history-row:last-child{border-bottom:none;}
+.history-date{font-size:11px;color:var(--text2);margin-top:2px;}
+/* POPUP */
+.popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;}
+.popup-overlay.open{display:flex;}
+.popup-sheet{background:var(--card);border-radius:16px 16px 0 0;width:100%;max-width:480px;margin:0 auto;padding:16px;max-height:85vh;overflow-y:auto;}
+.popup-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;}
+.popup-title{font-size:15px;font-weight:700;}
+.popup-sub{font-size:12px;color:var(--text2);margin-top:2px;}
+.popup-close{font-size:26px;color:var(--text2);cursor:pointer;line-height:1;padding:0 2px;margin-top:-2px;}
+.serie-row{border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;}
+.serie-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.serie-label{font-size:12px;font-weight:600;color:var(--text2);}
+.del-btn{font-size:11px;color:var(--red);border:1px solid #F09595;border-radius:var(--radius-sm);padding:2px 8px;cursor:pointer;background:transparent;display:flex;align-items:center;gap:3px;}
+.del-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;}
+/* GREETING */
+.greeting{font-size:22px;font-weight:700;margin-bottom:3px;}
+.greeting-sub{font-size:13px;color:var(--text2);margin-bottom:20px;}
+/* PROGRESS BAR */
+.prog-bar-wrap{background:var(--border);border-radius:20px;height:6px;margin-top:6px;}
+.prog-bar{background:var(--blue);height:6px;border-radius:20px;transition:width .3s;}
+/* EMPTY STATE */
+.empty{text-align:center;padding:40px 20px;color:var(--text2);}
+.empty svg{width:40px;height:40px;stroke:var(--text3);fill:none;stroke-width:1.2;margin:0 auto 12px;display:block;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ DATA ═══════════════════════════════ -->
+<script>
+const PROGRAM = {
+  weeks: 8,
+  workouts: {
+    A: {
+      label: "Workout A",
+      sub: "Push + pull orizzontale",
+      day: "Martedì",
+      trisets: {
+        palestra: [
+          { label: "Triset A1 — principale", sets: 3, rest: "90–120 sec", exercises: [
+            { id:"panca",    name:"Panca manubri",     reps:"8–10",   kg:18, isCore:false, isNew:false },
+            { id:"rematore", name:"Rematore manubrio", reps:"8–10",   kg:16, isCore:false, isNew:false },
+            { id:"plank",    name:"Plank",             reps:"30–45s", kg:null, isCore:true, isNew:false }
+          ]},
+          { label: "Triset A2 — principale", sets: 3, rest: "90–120 sec", exercises: [
+            { id:"legext",  name:"Leg extension", reps:"10–12", kg:60, isCore:false, isNew:false },
+            { id:"legcurl", name:"Leg curl",       reps:"10–12", kg:40, isCore:false, isNew:true },
+            { id:"deadbug", name:"Dead bug",       reps:"8+8",   kg:null, isCore:true, isNew:false }
+          ]},
+          { label: "Triset A3 — accessorio", sets: 2, rest: "60 sec", exercises: [
+            { id:"triceps", name:"Tricipiti cavi",  reps:"12–15", kg:20, isCore:false, isNew:false },
+            { id:"biceps",  name:"Curl bicipiti",   reps:"12–15", kg:14, isCore:false, isNew:false },
+            { id:"plankl",  name:"Plank laterale",  reps:"20–30s", kg:null, isCore:true, isNew:false }
+          ]}
+        ],
+        casa: [
+          { label: "Triset A1 — principale", sets: 3, rest: "90–120 sec", exercises: [
+            { id:"floorpress", name:"Floor press / push-up lento", reps:"8–12",   kg:18, isCore:false, isNew:false },
+            { id:"row1arm_a",  name:"Rematore 1 braccio",          reps:"8–12",   kg:16, isCore:false, isNew:false },
+            { id:"plank_ca",   name:"Plank",                       reps:"30–45s", kg:null, isCore:true, isNew:false }
+          ]},
+          { label: "Triset A2 — principale", sets: 3, rest: "90–120 sec", exercises: [
+            { id:"goblet",     name:"Goblet squat",    reps:"10–12",  kg:16, isCore:false, isNew:false },
+            { id:"lunge_ca",   name:"Affondi statici", reps:"8–10/g", kg:10, isCore:false, isNew:false },
+            { id:"deadbug_ca", name:"Dead bug",        reps:"8+8",    kg:null, isCore:true, isNew:false }
+          ]},
+          { label: "Triset A3 — accessorio", sets: 2, rest: "60 sec", exercises: [
+            { id:"frenchpress", name:"French press manubri", reps:"12–15",  kg:18, isCore:false, isNew:false },
+            { id:"biceps_ca",   name:"Curl bicipiti",        reps:"12–15",  kg:14, isCore:false, isNew:false },
+            { id:"plankl_ca",   name:"Plank laterale",       reps:"20–30s", kg:null, isCore:true, isNew:false }
+          ]}
+        ]
+      }
+    },
+    C: {
+      label: "Workout C",
+      sub: "Sabato — scegli il tipo",
+      day: "Sabato",
+      trisets: {
+        fullbody: [
+          { label: "Triset C1 — full body", sets: 2, rest: "90 sec", exercises: [
+            { id:"goblet_c",   name:"Goblet squat",      reps:"10–12",  kg:12, isCore:false, isNew:false },
+            { id:"pushup_c",   name:"Push-up",           reps:"8–12",   kg:null, isCore:false, isNew:false, isBodyweight:true },
+            { id:"row1arm_c",  name:"Rematore 1 braccio",reps:"8–10",   kg:12, isCore:false, isNew:false },
+            { id:"plank_c1",   name:"Plank",             reps:"30–45s", kg:null, isCore:true, isNew:false }
+          ]},
+          { label: "Triset C2 — accessorio", sets: 2, rest: "60 sec", exercises: [
+            { id:"lunge_c",    name:"Affondi statici",   reps:"8–10/g", kg:10, isCore:false, isNew:false },
+            { id:"lateral_c",  name:"Alzate laterali",   reps:"12–15",  kg:6,  isCore:false, isNew:false },
+            { id:"biceps_c",   name:"Curl bicipiti",     reps:"12–15",  kg:10, isCore:false, isNew:false },
+            { id:"deadbug_c",  name:"Dead bug",          reps:"8+8",    kg:null, isCore:true, isNew:false }
+          ]}
+        ],
+        cardio: [
+          { label: "Triset Core 1", sets: 3, rest: "60 sec", exercises: [
+            { id:"plank_cc1",  name:"Plank",             reps:"40–60s", kg:null, isCore:true, isNew:false },
+            { id:"deadbug_cc", name:"Dead bug",          reps:"10+10",  kg:null, isCore:true, isNew:false },
+            { id:"plankl_cc",  name:"Plank laterale",    reps:"25–35s", kg:null, isCore:true, isNew:false }
+          ]},
+          { label: "Triset Core 2", sets: 3, rest: "60 sec", exercises: [
+            { id:"climbers_c", name:"Mountain climbers", reps:"30s",    kg:null, isCore:true, isNew:false },
+            { id:"bicycle_c",  name:"Crunch bicicletta", reps:"15–20",  kg:null, isCore:true, isNew:false },
+            { id:"superman_c", name:"Superman",          reps:"12–15",  kg:null, isCore:true, isNew:false }
+          ]}
+        ]
+      }
+    },
+    B: {
+      label: "Workout B",
+      sub: "Push + pull verticale + lower",
+      day: "Giovedì",
+      trisets: {
+        palestra: [
+          { label: "Triset B1 — principale", sets: 3, rest: "90–120 sec", exercises: [
+            { id:"lat",      name:"Lat machine",      reps:"8–10",   kg:50, isCore:false, isNew:false },
+            { id:"shoulder", name:"Shoulder press",   reps:"10–12",  kg:25, isCore:false, isNew:false },
+            { id:"deadbug2", name:"Dead bug",         reps:"8+8",    kg:null, isCore:true, isNew:false }
+          ]},
+          { label: "Triset B2 — principale", sets: 3, rest: "90–120 sec", exercises: [
+            { id:"squat",    name:"Squat manubri",    reps:"8–10",   kg:16, isCore:false, isNew:false },
+            { id:"abductor", name:"Abductor machine", reps:"12–15",  kg:70, isCore:false, isNew:false },
+            { id:"plank2",   name:"Plank",            reps:"30–45s", kg:null, isCore:true, isNew:false }
+          ]},
+          { label: "Triset B3 — accessorio", sets: 2, rest: "60 sec", exercises: [
+            { id:"lateral",  name:"Alzate laterali",  reps:"12–15",  kg:8,  isCore:false, isNew:false },
+            { id:"lunges",   name:"Affondi manubri",  reps:"8–10/g", kg:10, isCore:false, isNew:false },
+            { id:"abs",      name:"Addominali panca", reps:"12–15",  kg:20, isCore:false, isNew:false }
+          ]}
+        ],
+        casa: [
+          { label: "Triset B1 — principale", sets: 3, rest: "90–120 sec", exercises: [
+            { id:"shoulder_cb", name:"Shoulder press manubri", reps:"10–12",  kg:10, isCore:false, isNew:false },
+            { id:"row1arm_b",   name:"Rematore 1 braccio",reps:"8–12",   kg:16, isCore:false, isNew:false },
+            { id:"deadbug_cb",  name:"Dead bug",          reps:"8+8",    kg:null, isCore:true, isNew:false }
+          ]},
+          { label: "Triset B2 — principale", sets: 3, rest: "90–120 sec", exercises: [
+            { id:"squat_cb",  name:"Squat manubri",            reps:"8–10",   kg:16, isCore:false, isNew:false },
+            { id:"lunge_cb",  name:"Affondi reverse",          reps:"8–10/g", kg:10, isCore:false, isNew:false },
+            { id:"plank_cb",  name:"Plank",                    reps:"30–45s", kg:null, isCore:true, isNew:false }
+          ]},
+          { label: "Triset B3 — accessorio", sets: 2, rest: "60 sec", exercises: [
+            { id:"biceps_cb",  name:"Curl bicipiti",          reps:"12–15",  kg:14, isCore:false, isNew:false },
+            { id:"lateral_cb", name:"Alzate laterali",        reps:"12–15",  kg:8,  isCore:false, isNew:false },
+            { id:"abs_cb",     name:"Addominali su panca",    reps:"12–15",  kg:20, isCore:false, isNew:false }
+          ]}
+        ]
+      }
+    }
+  }
+};
+
+// ── Triset accessor ────────────────────────────────────────────────────────
+function getTrisets(workoutKey, location) {
+  const wo = PROGRAM.workouts[workoutKey];
+  if (workoutKey === 'C') {
+    // location holds the C subtype: 'fullbody' or 'cardio'
+    return wo.trisets[location] || wo.trisets['fullbody'];
+  }
+  const loc = location || currentSessionLocation || 'palestra';
+  return wo.trisets[loc] || wo.trisets['palestra'];
+}
+
+// ── Progression logic ──────────────────────────────────────────────────────
+function getRepRange(repsStr) {
+  const m = repsStr.match(/(\d+)[–\-](\d+)/);
+  if (m) return [parseInt(m[1]), parseInt(m[2])];
+  return null;
+}
+function isTimeEx(repsStr) { return /s$|sec/.test(repsStr); }
+function isBodyEx(repsStr) { return /\+/.test(repsStr) || /\/g$/.test(repsStr); }
+
+function computeNextWeek(exId, workoutKey, currentWeek, history) {
+  // Find the last session data for this exercise
+  const sessions = history.filter(s => s.workout === workoutKey);
+  if (!sessions.length) return null;
+  const last = sessions[sessions.length - 1];
+  const exData = last.exercises && last.exercises[exId];
+  if (!exData || !exData.series || !exData.series.length) return null;
+
+  // Get base exercise def
+  let exDef = null;
+  for (const t of getTrisets(workoutKey, 'palestra')) {
+    const f = t.exercises.find(e => e.id === exId);
+    if (f) { exDef = f; break; }
+  }
+  if (!exDef || exDef.kg === null) return null;
+
+  const lastSerie = exData.series[exData.series.length - 1];
+  const kgUsed = parseFloat(lastSerie.kg) || exDef.kg;
+  const repsUsed = parseInt(lastSerie.reps) || 0;
+  const rirUsed = parseInt(lastSerie.rir);
+  const range = getRepRange(exDef.reps);
+  if (!range) return { kg: kgUsed, note: "" };
+
+  const [minR, maxR] = range;
+  let nextKg = kgUsed;
+  let note = "";
+
+  if (currentWeek >= 7) {
+    note = "Settimana di spinta — spingi a RIR 0–1";
+    return { kg: nextKg, note };
+  }
+  if (currentWeek === 8) {
+    nextKg = Math.round(kgUsed * 0.8 * 2) / 2;
+    return { kg: nextKg, note: "Deload — –20% carico" };
+  }
+
+  if (repsUsed >= maxR && rirUsed <= 3) {
+    // Increase load
+    const inc = kgUsed >= 40 ? 2.5 : (kgUsed >= 20 ? 2.5 : 2);
+    nextKg = kgUsed + inc;
+    note = `↑ carico (+${inc} kg) — eri al massimo range`;
+  } else if (repsUsed < minR) {
+    note = "Mantieni stesso carico — lavora sul range";
+  } else {
+    note = "Aggiungi 1–2 reps prima di aumentare carico";
+  }
+  return { kg: nextKg, note };
+}
+
+// ── Storage helpers ────────────────────────────────────────────────────────
+const STORE_KEY = "wt_data_v1";
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || { history: [], currentWeek: 1, lastWorkout: null }; }
+  catch(e) { return { history: [], currentWeek: 1, lastWorkout: null }; }
+}
+function saveData(d) { localStorage.setItem(STORE_KEY, JSON.stringify(d)); }
+
+// ── App state ──────────────────────────────────────────────────────────────
+let appData = loadData();
+let currentSessionWorkout = null; // 'A' or 'B'
+let currentSessionLocation = null; // 'palestra' or 'casa'
+let currentSessionData = {}; // { exId: { series: [{kg,reps,rir}] } }
+let popupExId = null;
+let popupWorkoutKey = null;
+</script>
+
+<!-- ═══════════════════════════════ HTML ══════════════════════════════════ -->
+
+<!-- POPUP dettaglio serie -->
+<div class="popup-overlay" id="popup-serie">
+  <div class="popup-sheet">
+    <div class="popup-header">
+      <div>
+        <div class="popup-title" id="popup-ex-name">Esercizio</div>
+        <div class="popup-sub" id="popup-ex-sub">Modifica serie</div>
+      </div>
+      <span class="popup-close" onclick="closePopup()">×</span>
+    </div>
+    <div id="popup-series-list"></div>
+    <button class="btn-primary" onclick="savePopup()">Salva modifiche</button>
+  </div>
+</div>
+
+<!-- ── SCREEN: HOME ─────────────────────────────────────────────────── -->
+<div class="screen active" id="s-home">
+  <div class="topbar">
+    <div style="flex:1">
+      <div class="topbar-title">Workout Tracker</div>
+      <div class="topbar-sub" id="home-week-label">Settimana 1 · 8 settimane</div>
+    </div>
+    <span class="topbar-icon" onclick="goTo('s-progress')" aria-label="progressi">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </span>
+  </div>
+  <div class="content">
+    <div class="greeting" id="home-greeting">Ciao Luca 👋</div>
+    <div class="greeting-sub">Prossimo allenamento suggerito:</div>
+    <div id="home-next-card"></div>
+    <div class="section-label">Oppure scegli</div>
+    <div id="home-other-card"></div>
+    <div id="home-last-section"></div>
+  </div>
+  <div class="nav-bar">
+    <button class="nav-item active" onclick="goTo('s-home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home
+    </button>
+    <button class="nav-item" onclick="goTo('s-progress')">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Progressi
+    </button>
+  </div>
+</div>
+
+<!-- ── SCREEN: LOCATION ─────────────────────────────────────────────── -->
+<div class="screen" id="s-location">
+  <div class="topbar">
+    <span class="topbar-back" onclick="goTo('s-home')">←</span>
+    <div>
+      <div class="topbar-title" id="loc-title">Workout A — sett. 1</div>
+      <div class="topbar-sub" id="loc-sub">Dove ti alleni oggi?</div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="loc-cards"></div>
+  </div>
+</div>
+
+<!-- ── SCREEN: WORKOUT ──────────────────────────────────────────────── -->
+<div class="screen" id="s-workout">
+  <div class="topbar">
+    <span class="topbar-back" onclick="goTo('s-location')">←</span>
+    <div>
+      <div class="topbar-title" id="wo-title">Workout A</div>
+      <div class="topbar-sub" id="wo-sub">Tocca "modifica" per cambiare una serie specifica</div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="workout-content"></div>
+    <button class="btn-primary" onclick="saveWorkout()">Salva allenamento</button>
+  </div>
+</div>
+
+<!-- ── SCREEN: FEEDBACK ─────────────────────────────────────────────── -->
+<div class="screen" id="s-feedback">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Allenamento salvato ✓</div>
+      <div class="topbar-sub" id="fb-sub">Workout A · sett. 1</div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="feedback-content"></div>
+    <button class="btn-primary" onclick="goTo('s-home')">Torna alla home</button>
+    <button class="btn-outline" onclick="goTo('s-progress')">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Vedi progressi
+    </button>
+  </div>
+</div>
+
+<!-- ── SCREEN: PROGRESS ─────────────────────────────────────────────── -->
+<div class="screen" id="s-progress">
+  <div class="topbar">
+    <span class="topbar-back" onclick="goTo('s-home')">←</span>
+    <div class="topbar-title">Progressi</div>
+  </div>
+  <div class="content">
+    <div id="progress-content"></div>
+    <button class="btn-outline" onclick="exportExcel()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Scarica Excel
+    </button>
+  </div>
+  <div class="nav-bar">
+    <button class="nav-item" onclick="goTo('s-home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home
+    </button>
+    <button class="nav-item active">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Progressi
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ JS ════════════════════════════════════ -->
+<script>
+// ── Navigation ─────────────────────────────────────────────────────────────
+function goTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  window.scrollTo(0,0);
+  if (screenId === 's-home') renderHome();
+  if (screenId === 's-progress') renderProgress();
+}
+
+// ── Suggest next workout ────────────────────────────────────────────────────
+function suggestNext() {
+  const last = appData.lastWorkout;
+  if (!last) return 'A';
+  if (last === 'A') return 'B';
+  if (last === 'B') return 'C';
+  return 'A';
+}
+
+// ── HOME ────────────────────────────────────────────────────────────────────
+function completedWeeks() {
+  const history = appData.history || [];
+  const weeks = [...new Set(history.map(s => s.week))];
+  return weeks.filter(w => {
+    const ws = history.filter(s => s.week === w);
+    return ws.some(s => s.workout === 'A') && ws.some(s => s.workout === 'B');
+  }).length;
+}
+
+function renderHome() {
+  appData = loadData();
+  const week = appData.currentWeek || 1;
+  document.getElementById('home-week-label').textContent = `Settimana ${week} · 8 settimane`;
+
+  const nextKey = suggestNext();
+  const otherKeys = ['A','B','C'].filter(k => k !== nextKey);
+  const nextWo = PROGRAM.workouts[nextKey];
+
+  const countNext = (appData.history||[]).filter(s => s.workout === nextKey).length;
+  document.getElementById('home-next-card').innerHTML = `
+    <div class="card tappable" onclick="startWorkout('${nextKey}')">
+      <div class="card-row">
+        <div><div class="card-title">${nextWo.label} — ${nextWo.day}</div><div class="card-sub">${nextWo.sub}</div></div>
+        <span class="badge badge-next">Prossimo</span>
+      </div>
+      <div class="prog-bar-wrap" style="margin-top:10px;"><div class="prog-bar" style="width:${Math.round(completedWeeks()/8*100)}%"></div></div>
+      <div style="font-size:11px;color:var(--text2);margin-top:4px;">Sett. ${week} di 8 · ${countNext} completat${countNext===1?'o':'i'}</div>
+    </div>`;
+
+  document.getElementById('home-other-card').innerHTML = otherKeys.map(k => {
+    const wo = PROGRAM.workouts[k];
+    const countK = (appData.history||[]).filter(s => s.workout === k).length;
+    return `<div class="card tappable" onclick="startWorkout('${k}')">
+      <div class="card-row">
+        <div><div class="card-title">${wo.label} — ${wo.day}</div><div class="card-sub">${wo.sub}</div></div>
+        <span class="badge badge-week">Sett ${week}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:6px;">${countK} completat${countK===1?'o':'i'}</div>
+    </div>`;
+  }).join('');
+
+  const lastSection = document.getElementById('home-last-section');
+  const history = appData.history || [];
+  if (history.length) {
+    const last = history[history.length - 1];
+    const wo = PROGRAM.workouts[last.workout];
+    const d = new Date(last.date);
+    const dateStr = d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});
+    lastSection.innerHTML = `
+      <div class="section-label">Ultimo allenamento</div>
+      <div class="card">
+        <div class="card-row">
+          <div><div class="card-title">${wo.label} — ${dateStr}</div><div class="card-sub">${last.location} · sett. ${last.week}</div></div>
+          <span class="badge badge-done">Fatto</span>
+        </div>
+      </div>`;
+  } else {
+    lastSection.innerHTML = `
+      <div class="section-label">Primo allenamento</div>
+      <div class="card"><div class="card-sub" style="text-align:center;padding:8px 0;">Inizia il tuo primo allenamento 💪</div></div>`;
+  }
+}
+
+// ── START WORKOUT ───────────────────────────────────────────────────────────
+function startWorkout(key) {
+  currentSessionWorkout = key;
+  currentSessionData = {};
+  const wo = PROGRAM.workouts[key];
+  const week = appData.currentWeek || 1;
+  if (key === 'C') {
+    renderTypeSelection();
+    goTo('s-location');
+  } else {
+    document.getElementById('loc-title').textContent = `${wo.label} — sett. ${week}`;
+    document.getElementById('loc-sub').textContent = 'Dove ti alleni oggi?';
+    renderLocationCards();
+    goTo('s-location');
+  }
+}
+
+function renderLocationCards() {
+  document.getElementById('loc-cards').innerHTML = `
+    <div class="loc-grid">
+      <div class="loc-card" onclick="selectLocation('palestra')">
+        <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+        <div class="loc-label">Palestra</div>
+      </div>
+      <div class="loc-card" onclick="selectLocation('casa')">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <div class="loc-label">Casa</div>
+      </div>
+    </div>`;
+}
+
+function renderTypeSelection() {
+  const wo = PROGRAM.workouts['C'];
+  const week = appData.currentWeek || 1;
+  document.getElementById('loc-title').textContent = `${wo.label} — sett. ${week}`;
+  document.getElementById('loc-sub').textContent = 'Che tipo di allenamento vuoi fare oggi?';
+  document.getElementById('loc-cards').innerHTML = `
+    <div class="loc-grid">
+      <div class="loc-card" onclick="selectLocation('fullbody')">
+        <svg viewBox="0 0 24 24" style="width:32px;height:32px;stroke:var(--text2);fill:none;stroke-width:1.5;margin:0 auto 10px;display:block;"><path d="M6 4v16M18 4v16M6 12h12M2 7h4M18 7h4M2 17h4M18 17h4"/></svg>
+        <div class="loc-label">Full body leggero</div>
+      </div>
+      <div class="loc-card" onclick="selectLocation('cardio')">
+        <svg viewBox="0 0 24 24" style="width:32px;height:32px;stroke:var(--text2);fill:none;stroke-width:1.5;margin:0 auto 10px;display:block;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <div class="loc-label">Cardio + Core</div>
+      </div>
+    </div>`;
+}
+
+function selectLocation(loc) {
+  currentSessionLocation = loc;
+  renderWorkout();
+  goTo('s-workout');
+}
+
+// ── RENDER WORKOUT ──────────────────────────────────────────────────────────
+function getKgForEx(exId, workoutKey, exDef) {
+  // Check if there's a next-week suggestion
+  const week = appData.currentWeek || 1;
+  const suggestion = computeNextWeek(exId, workoutKey, week, appData.history || []);
+  if (suggestion) return suggestion.kg;
+  return exDef.kg;
+}
+
+function defaultReps(repsStr) {
+  // numeric range e.g. "8–10" → midpoint
+  const range = getRepRange(repsStr);
+  if (range) return String(Math.round((range[0] + range[1]) / 2));
+  // time range e.g. "30–45s" → midpoint in seconds
+  const timeRange = repsStr.match(/(\d+)[–\-](\d+)s/);
+  if (timeRange) return String(Math.round((parseInt(timeRange[1]) + parseInt(timeRange[2])) / 2));
+  // single time e.g. "30s" → that value
+  if (isTimeEx(repsStr)) { const m = repsStr.match(/(\d+)/); return m ? m[1] : ''; }
+  // body e.g. "8+8" → 8
+  const bodyM = repsStr.match(/(\d+)/);
+  if (bodyM) return bodyM[1];
+  return '';
+}
+
+function initSeriesForEx(ex, numSets) {
+  if (currentSessionData[ex.id]) return;
+  const kg = ex.kg !== null ? getKgForEx(ex.id, currentSessionWorkout, ex) : null;
+  const reps = defaultReps(ex.reps);
+  const defaultRir = ex.isCore ? '' : (currentSessionWorkout === 'C' || ex.isBodyweight ? '4' : '2');
+  currentSessionData[ex.id] = {
+    series: Array.from({length: numSets}, () => ({
+      kg: kg !== null ? String(kg) : '',
+      reps: reps,
+      rir: defaultRir
+    }))
+  };
+}
+
+function renderWorkout() {
+  const wo = PROGRAM.workouts[currentSessionWorkout];
+  const week = appData.currentWeek || 1;
+  document.getElementById('wo-title').textContent = `${wo.label} · ${currentSessionLocation}`;
+  document.getElementById('wo-sub').textContent = `Sett. ${week} · tocca "modifica" per cambiare una serie`;
+
+  let html = '';
+  for (const triset of getTrisets(currentSessionWorkout, currentSessionLocation)) {
+    html += `<div class="triset-block">
+      <div class="triset-head"><span>${triset.label} · ${triset.sets} giri</span><span>rec. ${triset.rest}</span></div>`;
+    for (const ex of triset.exercises) {
+      initSeriesForEx(ex, triset.sets);
+      const sd = currentSessionData[ex.id];
+      const lastS = sd.series[sd.series.length - 1];
+      const kgSug = ex.kg !== null ? getKgForEx(ex.id, currentSessionWorkout, ex) : null;
+      const kgClass = ex.isNew ? 'new' : 'kg';
+      const kgTag = ex.kg !== null ? `<span class="ex-tag ${kgClass}">${kgSug} kg${ex.isNew?' *':''}</span>` : '';
+
+      const isTime = isTimeEx(ex.reps);
+      const isBodyweight = ex.isBodyweight === true;
+      html += `<div class="ex-row${ex.isCore?' core':''}">
+        <div class="ex-top">
+          <span class="ex-name">${ex.name}</span>
+          <div class="ex-tags">
+            <span class="ex-tag">${ex.reps}</span>
+            ${kgTag}
+            <button class="edit-btn" onclick="openPopup('${ex.id}','${currentSessionWorkout}')">
+              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> modifica
+            </button>
+          </div>
+        </div>`;
+
+      if (ex.isCore) {
+        if (isTime) {
+          html += `<div class="ex-inputs">
+            <div class="ex-input-group"><div class="ex-input-label">secondi</div>
+            <input class="ex-input" type="number" value="${lastS.reps||''}" onchange="updateInline('${ex.id}','time',this.value)"></div>
+          </div>`;
+        } else {
+          html += `<div class="ex-inputs">
+            <div class="ex-input-group"><div class="ex-input-label">reps</div>
+            <input class="ex-input" type="number" value="${lastS.reps||''}" onchange="updateInline('${ex.id}','reps',this.value)"></div>
+          </div>`;
+        }
+      } else if (isBodyweight) {
+        html += `<div class="ex-inputs">
+          <div class="ex-input-group"><div class="ex-input-label">reps</div>
+          <input class="ex-input" type="number" value="${lastS.reps||''}" onchange="updateInline('${ex.id}','reps',this.value)"></div>
+          <div class="ex-input-group"><div class="ex-input-label">RIR</div>
+          <input class="ex-input" type="number" value="${lastS.rir||'4'}" onchange="updateInline('${ex.id}','rir',this.value)"></div>
+        </div>`;
+      } else {
+        if (isTime) {
+          html += `<div class="ex-inputs">
+            <div class="ex-input-group"><div class="ex-input-label">secondi</div>
+            <input class="ex-input" type="number" value="${lastS.reps||''}" onchange="updateInline('${ex.id}','time',this.value)"></div>
+          </div>`;
+        } else {
+          html += `<div class="ex-inputs">
+            <div class="ex-input-group"><div class="ex-input-label">kg usati</div>
+            <input class="ex-input" type="number" value="${lastS.kg||kgSug||''}" onchange="updateInline('${ex.id}','kg',this.value)"></div>
+            <div class="ex-input-group"><div class="ex-input-label">reps</div>
+            <input class="ex-input" type="number" value="${lastS.reps||''}" onchange="updateInline('${ex.id}','reps',this.value)"></div>
+            <div class="ex-input-group"><div class="ex-input-label">RIR</div>
+            <input class="ex-input" type="number" value="${lastS.rir||'2'}" onchange="updateInline('${ex.id}','rir',this.value)"></div>
+          </div>`;
+        }
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  document.getElementById('workout-content').innerHTML = html;
+}
+
+function updateInline(exId, field, value) {
+  const sd = currentSessionData[exId];
+  if (!sd) return;
+  // Update last series
+  const last = sd.series[sd.series.length - 1];
+  if (field === 'time') { last.reps = value; }
+  else { last[field] = value; }
+  // Also sync all series to the same kg/rir if not yet modified individually
+  if (field === 'kg' || field === 'rir') {
+    sd.series.forEach(s => { s[field] = value; });
+  }
+}
+
+// ── POPUP ────────────────────────────────────────────────────────────────────
+function openPopup(exId, workoutKey) {
+  popupExId = exId;
+  popupWorkoutKey = workoutKey;
+  let exDef = null;
+  let trisetSets = 3;
+  for (const t of getTrisets(workoutKey, currentSessionLocation)) {
+    const f = t.exercises.find(e => e.id === exId);
+    if (f) { exDef = f; trisetSets = t.sets; break; }
+  }
+  if (!exDef) return;
+
+  initSeriesForEx(exDef, trisetSets);
+  const sd = currentSessionData[exId];
+
+  document.getElementById('popup-ex-name').textContent = exDef.name;
+  document.getElementById('popup-ex-sub').textContent = `Modifica serie — ${trisetSets} serie previste`;
+
+  const isTime = isTimeEx(exDef.reps);
+  const isCore = exDef.kg === null && !exDef.isBodyweight;
+  const isBodyweightEx = exDef.isBodyweight === true;
+
+  let html = '';
+  sd.series.forEach((s, i) => {
+    html += `<div class="serie-row" id="serie-row-${i}">
+      <div class="serie-head">
+        <span class="serie-label">Serie ${i+1}</span>
+        <button class="del-btn" onclick="deleteSerie(${i})">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg> Elimina
+        </button>
+      </div>
+      <div class="serie-inputs">`;
+    if (isCore || isTime) {
+      html += `<div class="ex-input-group"><div class="ex-input-label">${isTime ? 'secondi' : 'reps'}</div>
+        <input class="ex-input" id="ps-${i}-reps" type="number" value="${s.reps||''}"></div>`;
+    } else if (isBodyweightEx) {
+      html += `
+        <div class="ex-input-group"><div class="ex-input-label">reps</div>
+          <input class="ex-input" id="ps-${i}-reps" type="number" value="${s.reps||''}"></div>
+        <div class="ex-input-group"><div class="ex-input-label">RIR</div>
+          <input class="ex-input" id="ps-${i}-rir" type="number" value="${s.rir||'4'}"></div>`;
+    } else {
+      html += `
+        <div class="ex-input-group"><div class="ex-input-label">kg usati</div>
+          <input class="ex-input" id="ps-${i}-kg" type="number" value="${s.kg||''}"></div>
+        <div class="ex-input-group"><div class="ex-input-label">reps</div>
+          <input class="ex-input" id="ps-${i}-reps" type="number" value="${s.reps||''}"></div>
+        <div class="ex-input-group"><div class="ex-input-label">RIR</div>
+          <input class="ex-input" id="ps-${i}-rir" type="number" value="${s.rir||'2'}"></div>`;
+    }
+    html += `</div></div>`;
+  });
+  document.getElementById('popup-series-list').innerHTML = html;
+  document.getElementById('popup-serie').classList.add('open');
+}
+
+function deleteSerie(idx) {
+  const sd = currentSessionData[popupExId];
+  if (!sd || sd.series.length <= 1) return;
+  sd.series.splice(idx, 1);
+  openPopup(popupExId, popupWorkoutKey);
+}
+
+function savePopup() {
+  const sd = currentSessionData[popupExId];
+  if (!sd) { closePopup(); return; }
+  let exDef = null;
+  for (const t of getTrisets(popupWorkoutKey, currentSessionLocation)) {
+    const f = t.exercises.find(e => e.id === popupExId);
+    if (f) { exDef = f; break; }
+  }
+  const isTime = exDef && isTimeEx(exDef.reps);
+  const isCore = exDef && exDef.kg === null && !exDef.isBodyweight;
+  const isBodyweightEx = exDef && exDef.isBodyweight === true;
+  sd.series.forEach((s, i) => {
+    const repsEl = document.getElementById(`ps-${i}-reps`);
+    if (repsEl) s.reps = repsEl.value;
+    if (!isTime && !isCore) {
+      const rirEl = document.getElementById(`ps-${i}-rir`);
+      if (rirEl) s.rir = rirEl.value;
+      if (!isBodyweightEx) {
+        const kgEl = document.getElementById(`ps-${i}-kg`);
+        if (kgEl) s.kg = kgEl.value;
+      }
+    }
+  });
+  closePopup();
+  renderWorkout();
+}
+
+function closePopup() {
+  document.getElementById('popup-serie').classList.remove('open');
+  popupExId = null;
+}
+
+// ── SAVE WORKOUT ─────────────────────────────────────────────────────────────
+function saveWorkout() {
+  const wo = PROGRAM.workouts[currentSessionWorkout];
+  const week = appData.currentWeek || 1;
+  const now = new Date();
+
+  const session = {
+    id: Date.now(),
+    date: now.toISOString(),
+    workout: currentSessionWorkout,
+    location: currentSessionLocation,
+    week: week,
+    exercises: JSON.parse(JSON.stringify(currentSessionData))
+  };
+  appData.history = appData.history || [];
+  appData.history.push(session);
+  appData.lastWorkout = currentSessionWorkout;
+
+  // Advance week if both A and B done this week (C is optional bonus)
+  const thisWeekSessions = appData.history.filter(s => s.week === week);
+  const doneA = thisWeekSessions.some(s => s.workout === 'A');
+  const doneB = thisWeekSessions.some(s => s.workout === 'B');
+  if (doneA && doneB && week < 8) {
+    appData.currentWeek = week + 1;
+  }
+  // After saving C, suggest A next (start new week)
+  if (currentSessionWorkout === 'C') appData.lastWorkout = 'C';
+
+  saveData(appData);
+  renderFeedback(session);
+  goTo('s-feedback');
+}
+
+// ── FEEDBACK ──────────────────────────────────────────────────────────────────
+function renderFeedback(session) {
+  const wo = PROGRAM.workouts[session.workout];
+  const week = session.week;
+  document.getElementById('fb-sub').textContent = `${wo.label} · sett. ${week} · ${session.location}`;
+
+  let messages = [];
+  let hasWarning = false;
+
+  // Check each exercise
+  for (const t of getTrisets(session.workout, session.location)) {
+    for (const ex of t.exercises) {
+      if (ex.kg === null) continue;
+      const sd = session.exercises[ex.id];
+      if (!sd || !sd.series.length) continue;
+      const lastS = sd.series[sd.series.length - 1];
+      const rir = parseInt(lastS.rir);
+      const reps = parseInt(lastS.reps);
+      const range = getRepRange(ex.reps);
+
+      const rirThreshold = session.workout === 'C' ? 5 : 3;
+      if (!isNaN(rir) && rir > rirThreshold && range) {
+        messages.push(`<strong>${ex.name}</strong>: RIR ${rir} — carico probabilmente troppo basso, considera di aumentarlo.`);
+        hasWarning = true;
+      }
+      if (range && !isNaN(reps) && reps >= range[1] && !isNaN(rir) && rir <= 2) {
+        const next = computeNextWeek(ex.id, session.workout, week, appData.history);
+        if (next && next.kg > (parseFloat(lastS.kg)||0)) {
+          messages.push(`<strong>${ex.name}</strong>: ottimo! Prossima sessione prova ${next.kg} kg.`);
+        }
+      }
+      if (sd.series.length < t.sets) {
+        messages.push(`<strong>${ex.name}</strong>: hai completato ${sd.series.length} serie su ${t.sets} previste.`);
+        hasWarning = true;
+      }
+    }
+  }
+
+  if (session.workout !== 'C') {
+    if (week === 7) messages.unshift("Settimana di spinta — spingi a RIR 0–1 sugli esercizi principali.");
+    if (week === 8) messages.unshift("Settimana di deload — riduci il carico del 20% e recupera bene.");
+  }
+  if (session.workout === 'C' && session.location === 'cardio') messages.unshift("Ricordati i 20 minuti di camminata veloce a fine sessione! 🚶");
+  if (session.workout === 'C') messages.unshift("Workout C completato — allenamento bonus della settimana.");
+
+  const boxClass = hasWarning ? 'feedback-box feedback-warn' : 'feedback-box';
+  const icon = hasWarning
+    ? `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+    : `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;
+  const title = hasWarning ? "Qualcosa da tenere d'occhio" : "Allenamento completato";
+
+  const msgHtml = messages.length
+    ? messages.map(m => `<div style="margin-bottom:4px;">· ${m}</div>`).join('')
+    : '<div>Tutto nella norma. Continua così!</div>';
+
+  // Next workout suggestion
+  const nextMap = {'A':'B','B':'C','C':'A'};
+  const nextKey = nextMap[session.workout] || 'A';
+  const nextWo = PROGRAM.workouts[nextKey];
+  const nextWeek = appData.currentWeek || week;
+
+  document.getElementById('feedback-content').innerHTML = `
+    <div class="${boxClass}">
+      <div class="feedback-title">${icon} ${title}</div>
+      <div class="feedback-text">${msgHtml}</div>
+    </div>
+    <div class="section-label">Prossimo allenamento</div>
+    <div class="card">
+      <div class="card-title">${nextWo.label} — ${nextWo.day}</div>
+      <div class="card-sub" style="margin-top:3px;">Settimana ${nextWeek} · i carichi verranno aggiornati automaticamente</div>
+    </div>`;
+}
+
+// ── PROGRESS ──────────────────────────────────────────────────────────────────
+function renderProgress() {
+  appData = loadData();
+  const history = appData.history || [];
+  const week = appData.currentWeek || 1;
+
+  // Stats
+  const total = history.length;
+  const streak = computeStreak(history);
+  let increased = 0;
+  if (history.length >= 2) {
+    const first = history[0];
+    const last = history[history.length-1];
+    for (const key of ['A','B']) {
+      for (const t of getTrisets(key, 'palestra')) {
+        for (const ex of t.exercises) {
+          if (ex.kg === null) continue;
+          const fsd = first.workout===key && first.exercises[ex.id];
+          const lsd = last.workout===key && last.exercises[ex.id];
+          if (fsd && lsd && fsd.series.length && lsd.series.length) {
+            const fkg = parseFloat(fsd.series[fsd.series.length-1].kg)||0;
+            const lkg = parseFloat(lsd.series[lsd.series.length-1].kg)||0;
+            if (lkg > fkg) increased++;
+          }
+        }
+      }
+    }
+  }
+
+  let html = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Allenamenti</div><div class="stat-val">${total}</div></div>
+      <div class="stat-card"><div class="stat-label">Settimana</div><div class="stat-val">${week} / 8</div></div>
+      <div class="stat-card"><div class="stat-label">Carichi aumentati</div><div class="stat-val">${increased}</div></div>
+      <div class="stat-card"><div class="stat-label">Streak</div><div class="stat-val">${streak} 🔥</div></div>
+    </div>`;
+
+  if (!history.length) {
+    html += `<div class="empty">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Nessun allenamento ancora. Inizia il primo dalla home!
+    </div>`;
+  } else {
+    html += `<div class="section-label">Storico allenamenti</div><div class="card" style="padding:10px 14px;">`;
+    [...history].reverse().slice(0,10).forEach(s => {
+      const wo = PROGRAM.workouts[s.workout];
+      const d = new Date(s.date);
+      const dateStr = d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});
+      html += `<div class="history-row">
+        <div><div style="font-size:13px;font-weight:600;">${wo.label}</div><div class="history-date">${dateStr} · sett. ${s.week} · ${s.location}</div></div>
+        <span class="badge badge-done">✓</span>
+      </div>`;
+    });
+    if (history.length > 10) html += `<div style="font-size:12px;color:var(--text2);text-align:center;padding:8px 0;">+ altri ${history.length-10} nel file Excel</div>`;
+    html += `</div>`;
+  }
+
+  document.getElementById('progress-content').innerHTML = html;
+}
+
+function computeStreak(history) {
+  if (!history.length) return 0;
+  const sorted = [...history].sort((a,b) => new Date(b.date)-new Date(a.date));
+  let streak = 1;
+  for (let i=1; i<sorted.length; i++) {
+    const d1 = new Date(sorted[i-1].date);
+    const d2 = new Date(sorted[i].date);
+    const diff = (d1-d2)/(1000*60*60*24);
+    if (diff <= 7) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// ── EXCEL EXPORT ──────────────────────────────────────────────────────────────
+function exportExcel() {
+  const history = appData.history || [];
+  if (!history.length) { alert("Nessun allenamento da esportare ancora."); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  // ── Sheet 1: Log ──
+  const logRows = [["Data","Settimana","Workout","Location","Triset","Esercizio","Serie","Kg previsti","Kg usati","Reps previste","Reps effettive","RIR previsto","RIR effettivo"]];
+  for (const s of history) {
+    const wo = PROGRAM.workouts[s.workout];
+    for (const t of getTrisets(s.workout, s.location)) {
+      for (const ex of t.exercises) {
+        const sd = s.exercises[ex.id];
+        if (!sd) continue;
+        const d = new Date(s.date).toLocaleDateString('it-IT');
+        sd.series.forEach((serie, i) => {
+          const isCore = ex.kg === null;
+          const isMainEx = ['panca','rematore','lat','squat','floorpress','row1arm_a','row1arm_b','goblet','squat_cb'].includes(ex.id);
+          let rirPrev = '—';
+          if (!isCore) {
+            if (s.week === 8) rirPrev = '3–4';
+            else if (s.week === 7) rirPrev = isMainEx ? '0–1' : '2–3';
+            else rirPrev = '2–3';
+          }
+          logRows.push([
+            d, s.week, wo.label, s.location, t.label, ex.name,
+            i+1, ex.kg||'—', isCore ? '—' : (serie.kg||'—'),
+            ex.reps, serie.reps||'—',
+            rirPrev, isCore ? '—' : (serie.rir||'—')
+          ]);
+        });
+      }
+    }
+  }
+  const ws1 = XLSX.utils.aoa_to_sheet(logRows);
+  ws1['!cols'] = [10,10,12,10,22,22,7,12,10,13,14,13,14].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws1, "Log allenamenti");
+
+  // ── Sheet 2: Progressione ──
+  const allEx = [];
+  for (const key of ['A','B']) {
+    for (const t of getTrisets(key, 'palestra')) {
+      for (const ex of t.exercises) {
+        if (ex.kg !== null) allEx.push({...ex, workoutKey: key});
+      }
+    }
+  }
+
+  const weeksWithData = [...new Set(history.map(s => s.week))].sort((a,b)=>a-b);
+
+  // Row 1: Workout grouping — col0 empty, col1 empty, then Workout A/B labels
+  const groupRow = ["", ""];
+  for (const ex of allEx) groupRow.push(ex.workoutKey === 'A' ? 'Workout A' : 'Workout B');
+
+  // Row 2: Exercise names — col0+col1 merged as header label
+  const headerRow = ["Settimana", ""].concat(allEx.map(e => e.name));
+
+  const progRows = [groupRow, headerRow];
+
+  for (const w of weeksWithData) {
+    const wSessions = history.filter(s => s.week === w);
+    // col0 = settimana label (merged over 3 rows), col1 = metric label, then data
+    const kgRow   = [`Settimana ${w}`, 'kg'];
+    const repsRow = ['', 'reps'];
+    const rirRow  = ['', 'RIR'];
+    for (const ex of allEx) {
+      const sess = wSessions.filter(s => s.workout === ex.workoutKey);
+      let kg='—', rps='—', rir='—';
+      if (sess.length) {
+        const last = sess[sess.length-1];
+        const sd = last.exercises[ex.id];
+        if (sd && sd.series.length) {
+          const ls = sd.series[sd.series.length-1];
+          kg = ls.kg||'—'; rps = ls.reps||'—'; rir = ls.rir||'—';
+        }
+      }
+      kgRow.push(kg); repsRow.push(rps); rirRow.push(rir);
+    }
+    progRows.push(kgRow, repsRow, rirRow);
+  }
+
+  // Delta row
+  const deltaRow = ["Δ kg (sett 1 → ultima)", ""];
+  for (const ex of allEx) {
+    const firstSess = history.find(s => s.workout === ex.workoutKey && s.week === weeksWithData[0]);
+    const lastW = weeksWithData[weeksWithData.length-1];
+    const lastSess = [...history].reverse().find(s => s.workout === ex.workoutKey && s.week === lastW);
+    let delta = '—';
+    if (firstSess && lastSess && firstSess !== lastSess) {
+      const fsd = firstSess.exercises[ex.id];
+      const lsd = lastSess.exercises[ex.id];
+      if (fsd?.series?.length && lsd?.series?.length) {
+        const fkg = parseFloat(fsd.series[fsd.series.length-1].kg)||0;
+        const lkg = parseFloat(lsd.series[lsd.series.length-1].kg)||0;
+        delta = lkg - fkg;
+      }
+    }
+    deltaRow.push(delta);
+  }
+  progRows.push(deltaRow);
+
+  const ws2 = XLSX.utils.aoa_to_sheet(progRows);
+
+  // Column widths: col A (label) wide, col B (kg/reps/rir) medium, rest per exercise
+  ws2['!cols'] = [{wch:18}, {wch:8}, ...allEx.map(()=>({wch:16}))];
+
+  // Build merges
+  const merges = [];
+  const numEx = allEx.length;
+
+  // Row 0: merge "Workout A" and "Workout B" groups across their exercise columns
+  // Columns: 0=settimana, 1=metric, 2..N+1=exercises
+  let woAstart = null, woBstart = null, woAend = null, woBend = null;
+  allEx.forEach((ex, i) => {
+    const col = i + 2; // offset by 2: col0=settimana, col1=metric
+    if (ex.workoutKey === 'A') { if (woAstart===null) woAstart=col; woAend=col; }
+    else { if (woBstart===null) woBstart=col; woBend=col; }
+  });
+  if (woAstart !== null && woAend > woAstart) merges.push({s:{r:0,c:woAstart}, e:{r:0,c:woAend}});
+  if (woBstart !== null && woBend > woBstart) merges.push({s:{r:0,c:woBstart}, e:{r:0,c:woBend}});
+
+  // Row 1: merge col 0 and col 1 for the header label cell
+  merges.push({s:{r:1,c:0}, e:{r:1,c:1}});
+
+  // For each week group (3 rows): merge col 0 (settimana label) across 3 rows
+  // and keep col 1 separate for kg/reps/RIR label
+  const dataStartRow = 2;
+  for (let w = 0; w < weeksWithData.length; w++) {
+    const r = dataStartRow + w * 3;
+    merges.push({s:{r:r,c:0}, e:{r:r+2,c:0}});
+  }
+  // Delta row: merge col 0 and col 1
+  const deltaRowIdx = dataStartRow + weeksWithData.length * 3;
+  merges.push({s:{r:deltaRowIdx,c:0}, e:{r:deltaRowIdx,c:1}});
+
+  ws2['!merges'] = merges;
+  XLSX.utils.book_append_sheet(wb, ws2, "Progressione");
+
+  // ── Sheet 3: Istruzioni ──
+  const instrRows = [
+    ["WORKOUT TRACKER — GUIDA ALL'USO"],[""],
+    ["Sheet 'Log allenamenti'"],
+    ["Diario completo di ogni allenamento, serie per serie."],
+    ["Kg usati / Reps effettive mostrano l'ultima serie completata."],[""],
+    ["Sheet 'Progressione'"],
+    ["Ogni colonna = un esercizio. Ogni gruppo di 3 righe = una settimana (kg / reps / RIR)."],
+    ["La riga 'Δ kg' mostra la variazione dalla settimana 1 all'ultima disponibile."],[""],
+    ["Come leggere il RIR"],
+    ["RIR 0 = cedimento  |  RIR 2–3 = zona target  |  RIR > 3 = troppo facile"]
+  ];
+  const ws3 = XLSX.utils.aoa_to_sheet(instrRows);
+  ws3['!cols'] = [{wch:70}];
+  XLSX.utils.book_append_sheet(wb, ws3, "Istruzioni");
+
+  XLSX.writeFile(wb, `workout_tracker_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderHome();
+</script>
+</body>
+</html>
